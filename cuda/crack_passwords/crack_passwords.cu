@@ -393,36 +393,32 @@ __device__ int my_strncmp(const char* s1, const char* s2, int n) {
     return 0;
 }
 
-// eventem albo zmienną atomową
-// otagowac zmienna zeby nie wrzucić do rejestru
-// przekompilować do ptx
-// stałe w definie
 __global__ void crackHashes(const char* d_hashes, const char* d_dictionary, int dict_size, int hash_length, char* d_results, int hash_type) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < dict_size) {
-        char word[100] = { 0 };
-        my_strncpy(word, &d_dictionary[idx * 100], 100);
-        int word_len = my_strlen(word);
-        BYTE hash[32];
+    // int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // if (idx < dict_size) {
+    //     char word[100] = { 0 };
+    //     my_strncpy(word, &d_dictionary[idx * 100], 100);
+    //     int word_len = my_strlen(word);
+    //     BYTE hash[32];
 
-        if (hash_type == 0) {
-            kernel_md5_hash((BYTE*)word, word_len, hash);
-        } else {
-            kernel_sha256_hash((BYTE*)word, word_len, hash);
-        }
+    //     if (hash_type == 0) {
+    //         kernel_md5_hash((BYTE*)word, word_len, hash);
+    //     } else {
+    //         kernel_sha256_hash((BYTE*)word, word_len, hash);
+    //     }
 
         
-        char computed_hash[64];
-        for (int j = 0; j < hash_length; j++) {
-            my_sprintf(&computed_hash[j * 2], "%02x", hash[j]);
-        }
+    //     char computed_hash[64];
+    //     for (int j = 0; j < hash_length; j++) {
+    //         my_sprintf(&computed_hash[j * 2], "%02x", hash[j]);
+    //     }
 
-        if (my_strncmp(computed_hash, &d_hashes[idx * 64], 64) == 0) {
-            my_strncpy(&d_results[idx * 100], word, 100);
-        } else {
-            d_results[idx * 100] = '\0';
-        }
-    }
+    //     if (my_strncmp(computed_hash, &d_hashes[idx * 64], 64) == 0) {
+    //         my_strncpy(&d_results[idx * 100], word, 100);
+    //     } else {
+    //         d_results[idx * 100] = '\0';
+    //     }
+    // }
 }
 
 std::string extractHash(const std::string& input) {
@@ -441,7 +437,7 @@ std::string extractHash(const std::string& input) {
 
 int main(int argc, char* argv[]) {
     if (argc != 4 && argc != 6) {
-        std::cerr << "Usage: " << argv[0] << " <hash_file> <dictionary_file> <output_file> [<hash_lines> <dict_lines>]\n";
+        std::cerr << "Usage: " << argv[0] << " <login_file> <dictionary_file> <output_file> [<hash_lines> <dict_lines>]\n";
         return 1;
     }
 
@@ -454,7 +450,7 @@ int main(int argc, char* argv[]) {
 
     std::ifstream hashFile(argv[1]);
     if (!hashFile.is_open()) {
-        std::cerr << "Error: Couldn't open hash file.\n";
+        std::cerr << "Error: Couldn't open login file.\n";
         return 1;
     }
 
@@ -471,7 +467,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::unordered_map<std::string, std::string> loginToHash;
-    std::vector<std::string> dictionary;
+    std::vector<std::string> dictionaryTemp;
 
     std::string line;
 	int i = 0;
@@ -489,11 +485,14 @@ int main(int argc, char* argv[]) {
 
 	i = 0;
     while (std::getline(dictionaryFile, line)) {
-        dictionary.push_back(line);
+        dictionaryTemp.push_back(line);
 
 		if (argc == 6 && i>dict_lines) break;
 		i++;
     }
+
+    std::vector<std::string> dictionary(dictionaryTemp.begin(), dictionaryTemp.begin() + dict_lines);
+
 
     int dict_size = dictionary.size();
     char* d_dictionary;

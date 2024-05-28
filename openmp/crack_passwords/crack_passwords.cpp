@@ -81,7 +81,7 @@ std::string extractHash(const std::string& input) {
 
 int main(int argc, char* argv[]) {
     if (argc != 4 && argc != 6) {
-        std::cerr << "Usage: " << argv[0] << " <hash_file> <dictionary_file> <output_file> [<hash_lines> <dict_lines>]\n";
+        std::cerr << "Usage: " << argv[0] << " <login_file> <dictionary_file> <output_file> [<hash_lines> <dict_lines>]\n";
         return 1;
     }
 
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 
     std::ifstream hashFile(argv[1]);
     if (!hashFile.is_open()) {
-        std::cerr << "Error: Couldn't open hash file.\n";
+        std::cerr << "Error: Couldn't open login file.\n";
         return 1;
     }
 
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::unordered_map<std::string, std::string> loginToHash;
-    std::vector<std::string> dictionary;
+    std::vector<std::string> dictionaryTemp;
 
     std::string line;
     int i = 0;
@@ -129,11 +129,13 @@ int main(int argc, char* argv[]) {
 
     i = 0;
     while (std::getline(dictionaryFile, line)) {
-        dictionary.push_back(line);
+        dictionaryTemp.push_back(line);
 
 		if (argc == 6 && i>dict_lines) break;
 		i++;
     }
+
+    std::vector<std::string> dictionary(dictionaryTemp.begin(), dictionaryTemp.begin() + dict_lines);
 
     std::vector<std::string> results;
 
@@ -157,11 +159,6 @@ int main(int argc, char* argv[]) {
 
             if (!password.empty()) {
                 local_results.push_back(login + ":" + password);
-            } else {
-                #pragma omp critical
-                {
-                    std::cout << "Password for " << login << " wasn't cracked" << std::endl;
-                }
             }
         }
 
