@@ -2,7 +2,7 @@
 CXX := g++
 
 # Compiler Flags
-CXXFLAGS := -fopenmp
+CXXFLAGS := -fopenmp -w
 
 # Libraries
 LIBS := -lssl -lcrypto

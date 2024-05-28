@@ -440,10 +440,17 @@ std::string extractHash(const std::string& input) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <hash_file> <dictionary_file> <output_file>\n";
+    if (argc != 4 && argc != 6) {
+        std::cerr << "Usage: " << argv[0] << " <hash_file> <dictionary_file> <output_file> [<hash_lines> <dict_lines>]\n";
         return 1;
     }
+
+	int login_lines;
+	int dict_lines;
+	if (argc == 6){
+		login_lines = std::atoi(argv[4]);
+		dict_lines = std::atoi(argv[5]);
+	}
 
     std::ifstream hashFile(argv[1]);
     if (!hashFile.is_open()) {
@@ -467,6 +474,7 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> dictionary;
 
     std::string line;
+	int i = 0;
     while (std::getline(hashFile, line)) {
         size_t pos = line.find(':');
         if (pos != std::string::npos) {
@@ -474,10 +482,17 @@ int main(int argc, char* argv[]) {
             std::string hash = line.substr(pos + 1);
             loginToHash[login] = hash;
         }
+		
+		if (argc == 6 && i>login_lines) break;
+		i++;
     }
 
+	i = 0;
     while (std::getline(dictionaryFile, line)) {
         dictionary.push_back(line);
+
+		if (argc == 6 && i>dict_lines) break;
+		i++;
     }
 
     int dict_size = dictionary.size();

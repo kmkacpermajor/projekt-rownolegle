@@ -5,10 +5,10 @@ CXX := g++
 CXXFLAGS := -fopenmp
 
 # Source file
-SOURCE := hash_dict.cpp
+SOURCE := compare_hashes.cpp
 
 # Output file
-OUTPUT := hash_dict.o
+OUTPUT := compare_hashes.o
 
 # Makefile Targets
 all: $(OUTPUT)
