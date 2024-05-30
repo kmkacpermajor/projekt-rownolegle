@@ -39,7 +39,6 @@ std::string hash_word(const std::string& word, HashAlgorithm algorithm = HASH_SH
             break;
         }
         default:
-            // Default to SHA256
             return hash_word(word, HASH_SHA256);
     }
     return ss.str();
@@ -84,17 +83,14 @@ int main(int argc, char* argv[]) {
 
     infile.close();
 
-    // Vector to store the results
     std::vector<std::string> results(words.size());
 
-    // Parallel processing using OpenMP
     #pragma omp parallel for
     for (size_t i = 0; i < words.size(); ++i) {
         std::string hashed_word = hash_word(words[i], algorithm);
         results[i] = hashed_word + ":" + words[i];
     }
 
-    // Write results to file
     for (const auto& result : results) {
         outfile << result << std::endl;
     }

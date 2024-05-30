@@ -536,10 +536,8 @@ int main(int argc, char* argv[]) {
         cudaMemcpy(d_dictionary, h_dictionary, dict_size * 100 * sizeof(char), cudaMemcpyHostToDevice);
         cudaMemcpy(d_hashes, h_hashes.data(), dict_size * 64 * sizeof(char), cudaMemcpyHostToDevice);
 
-		// tym popróbować
         int blockSize = 256;
         int numBlocks = (dict_size + blockSize - 1) / blockSize;
-		// sprawdzic narzut (funkcja cuda nic nie robi)
         crackHashes<<<numBlocks, blockSize>>>(d_hashes, d_dictionary, dict_size, hash_length, d_results, hash_type);
         cudaDeviceSynchronize();
 

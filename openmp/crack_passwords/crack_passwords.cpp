@@ -56,7 +56,7 @@ std::string crackSHA256(const std::string& hash, const std::string& salt, const 
             #pragma omp critical
             {
                 if (!found) {
-                    result = dictionary[i];  // save only the original word
+                    result = dictionary[i];
                     found = true;
                 }
             }

@@ -10,7 +10,6 @@
 std::string crackMD5(const std::string& hash, const std::string& salt, const std::vector<std::string>& dictionary) {
     std::string result;
     bool found = false;
-    #pragma omp parallel for shared(found)
     for (int i = 0; i < dictionary.size(); ++i) {
         if (found)
             continue;
@@ -24,12 +23,9 @@ std::string crackMD5(const std::string& hash, const std::string& salt, const std
             sprintf(&md5_hash[j * 2], "%02x", (unsigned int)digest[j]);
 
         if (hash == md5_hash) {
-            #pragma omp critical
-            {
-                if (!found) {
-                    result = dictionary[i];
-                    found = true;
-                }
+            if (!found) {
+                result = dictionary[i];
+                found = true;
             }
         }
     }
@@ -39,7 +35,6 @@ std::string crackMD5(const std::string& hash, const std::string& salt, const std
 std::string crackSHA256(const std::string& hash, const std::string& salt, const std::vector<std::string>& dictionary) {
     std::string result;
     bool found = false;
-    #pragma omp parallel for shared(found)
     for (int i = 0; i < dictionary.size(); ++i) {
         if (found)
             continue;
@@ -53,13 +48,10 @@ std::string crackSHA256(const std::string& hash, const std::string& salt, const 
             sprintf(&sha256_hash[j * 2], "%02x", (unsigned int)digest[j]);
 
         if (hash == sha256_hash) {
-            #pragma omp critical
-            {
                 if (!found) {
-                    result = dictionary[i];  // save only the original word
+                    result = dictionary[i];
                     found = true;
                 }
-            }
         }
     }
     return result;
@@ -140,34 +132,27 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::string> results;
 
-    #pragma omp parallel
-    {
-        std::vector<std::string> local_results;
-        #pragma omp for nowait
-        for (int i = 0; i < loginToHash.size(); ++i) {
-            auto pair = std::next(std::begin(loginToHash), i);
-            std::string password;
-            std::string whole_hash = pair->second;
-            std::string login = pair->first;
-            std::string algorithm = whole_hash.substr(whole_hash.find('$') + 1, whole_hash.find('$', whole_hash.find('$') + 1) - whole_hash.find('$') - 1);
-            std::string salt = whole_hash.substr(whole_hash.find('$', whole_hash.find('$') + 1) + 1, whole_hash.find('$', whole_hash.find('$', whole_hash.find('$') + 1) + 1) - whole_hash.find('$', whole_hash.find('$') + 1) - 1);
-            std::string hash = extractHash(whole_hash);
+    std::vector<std::string> local_results;
+    for (int i = 0; i < loginToHash.size(); ++i) {
+        auto pair = std::next(std::begin(loginToHash), i);
+        std::string password;
+        std::string whole_hash = pair->second;
+        std::string login = pair->first;
+        std::string algorithm = whole_hash.substr(whole_hash.find('$') + 1, whole_hash.find('$', whole_hash.find('$') + 1) - whole_hash.find('$') - 1);
+        std::string salt = whole_hash.substr(whole_hash.find('$', whole_hash.find('$') + 1) + 1, whole_hash.find('$', whole_hash.find('$', whole_hash.find('$') + 1) + 1) - whole_hash.find('$', whole_hash.find('$') + 1) - 1);
+        std::string hash = extractHash(whole_hash);
 
-            if (algorithm == "MD5")
-                password = crackMD5(hash, salt, dictionary);
-            else if (algorithm == "SHA256")
-                password = crackSHA256(hash, salt, dictionary);
+        if (algorithm == "MD5")
+            password = crackMD5(hash, salt, dictionary);
+        else if (algorithm == "SHA256")
+            password = crackSHA256(hash, salt, dictionary);
 
-            if (!password.empty()) {
-                local_results.push_back(login + ":" + password);
-            }
-        }
-
-        #pragma omp critical
-        {
-            results.insert(results.end(), local_results.begin(), local_results.end());
+        if (!password.empty()) {
+            local_results.push_back(login + ":" + password);
         }
     }
+
+    results.insert(results.end(), local_results.begin(), local_results.end());
 
     for (const auto& result : results) {
         outputFile << result << "\n";

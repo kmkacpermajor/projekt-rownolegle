@@ -58,16 +58,11 @@ void processPasswords(const std::vector<std::pair<std::string, std::string>>& lo
         return;
     }
 
-    #pragma omp parallel for
     for (size_t i = 0; i < logins.size(); ++i) {
         const auto& [login, hash] = logins[i];
         auto it = dictionary.find(hash);
         if (it != dictionary.end()) {
-            #pragma omp critical
             outfile << login << ':' << it->second << '\n';
-        } else {
-            #pragma omp critical
-            std::cout << "Nie udało się złamać hasła dla " << login << '\n';
         }
     }
 

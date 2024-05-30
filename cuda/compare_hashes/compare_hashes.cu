@@ -5,7 +5,6 @@
 #include <vector>
 #include <cuda_runtime.h>
 
-// Własna implementacja strcmp na GPU
 __device__ int strcmp_gpu(const char* str1, const char* str2) {
 	while (*str1 && (*str1 == *str2)) {
 		str1++;
@@ -14,7 +13,6 @@ __device__ int strcmp_gpu(const char* str1, const char* str2) {
 	return *(unsigned char*)str1 - *(unsigned char*)str2;
 }
 
-// Własna implementacja strcpy na GPU
 __device__ char* strcpy_gpu(char* dest, const char* src) {
 	char* d = dest;
 	const char* s = src;
