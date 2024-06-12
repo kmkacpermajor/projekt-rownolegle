@@ -12,6 +12,9 @@
 
 #define SHA256_BLOCK_SIZE 32            // SHA256 outputs a 32 byte digest
 
+#define HASH_SIZE 64
+#define WORD_SIZE 128
+
 typedef struct {
 	BYTE data[64];
 	WORD datalen;
@@ -396,10 +399,10 @@ __device__ int my_strncmp(const char* s1, const char* s2, int n) {
 __global__ void crackHashes(const char* d_hashes, const char* d_dictionary, int dict_size, int hash_length, char* d_results, int hash_type) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < dict_size) {
-        char word[100] = { 0 };
-        my_strncpy(word, &d_dictionary[idx * 100], 100);
+        char word[WORD_SIZE] = { 0 };
+        my_strncpy(word, &d_dictionary[idx * WORD_SIZE], WORD_SIZE);
         int word_len = my_strlen(word);
-        BYTE hash[32];
+        BYTE hash[SHA256_BLOCK_SIZE];
 
         if (hash_type == 0) {
             kernel_md5_hash((BYTE*)word, word_len, hash);
@@ -408,15 +411,15 @@ __global__ void crackHashes(const char* d_hashes, const char* d_dictionary, int 
         }
 
         
-        char computed_hash[64];
+        char computed_hash[HASH_SIZE];
         for (int j = 0; j < hash_length; j++) {
             my_sprintf(&computed_hash[j * 2], "%02x", hash[j]);
         }
 
-        if (my_strncmp(computed_hash, &d_hashes[idx * 64], 64) == 0) {
-            my_strncpy(&d_results[idx * 100], word, 100);
+        if (my_strncmp(computed_hash, &d_hashes[idx * HASH_SIZE], HASH_SIZE) == 0) {
+            my_strncpy(&d_results[idx * WORD_SIZE], word, WORD_SIZE);
         } else {
-            d_results[idx * 100] = '\0';
+            d_results[idx * WORD_SIZE] = '\0';
         }
     }
 }
@@ -501,9 +504,9 @@ int main(int argc, char* argv[]) {
     int hash_length = 32;
     int hash_type = 0;
 
-    cudaMalloc(&d_dictionary, dict_size * 100 * sizeof(char));
-    cudaMalloc(&d_hashes, dict_size * 64 * sizeof(char));
-    cudaMalloc(&d_results, dict_size * 100 * sizeof(char));
+    cudaMalloc(&d_dictionary, dict_size * WORD_SIZE * sizeof(char));
+    cudaMalloc(&d_hashes, dict_size * HASH_SIZE * sizeof(char));
+    cudaMalloc(&d_results, dict_size * WORD_SIZE * sizeof(char));
 
     for (const auto& pair : loginToHash) {
         std::string login = pair.first;
@@ -519,34 +522,34 @@ int main(int argc, char* argv[]) {
             hash_length = 32;
         }
 
-        std::vector<char> h_hashes(dict_size * 64, '\0');
+        std::vector<char> h_hashes(dict_size * HASH_SIZE, '\0');
         for (int i = 0; i < dict_size; i++) {
-            strncpy(&h_hashes[i * 64], hash.c_str(), 64);
+            strncpy(&h_hashes[i * HASH_SIZE], hash.c_str(), HASH_SIZE);
         }
 
-		size_t totalSize = dictionary.size() * 100;
+		size_t totalSize = dictionary.size() * WORD_SIZE;
 
 		char* h_dictionary = new char[totalSize];
 		memset(h_dictionary, ' ', totalSize);
 
 		for (size_t i = 0; i < dictionary.size(); ++i) {
-			memcpy(h_dictionary + i * 100, (dictionary[i]+salt).c_str(), 100);
+			memcpy(h_dictionary + i * WORD_SIZE, (dictionary[i]+salt).c_str(), WORD_SIZE);
 		}
 
-        cudaMemcpy(d_dictionary, h_dictionary, dict_size * 100 * sizeof(char), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_hashes, h_hashes.data(), dict_size * 64 * sizeof(char), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_dictionary, h_dictionary, dict_size * WORD_SIZE * sizeof(char), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_hashes, h_hashes.data(), dict_size * HASH_SIZE * sizeof(char), cudaMemcpyHostToDevice);
 
         int blockSize = 256;
         int numBlocks = (dict_size + blockSize - 1) / blockSize;
         crackHashes<<<numBlocks, blockSize>>>(d_hashes, d_dictionary, dict_size, hash_length, d_results, hash_type);
         cudaDeviceSynchronize();
 
-        std::vector<char> h_results(dict_size * 100, '\0');
-        cudaMemcpy(h_results.data(), d_results, dict_size * 100 * sizeof(char), cudaMemcpyDeviceToHost);
+        std::vector<char> h_results(dict_size * WORD_SIZE, '\0');
+        cudaMemcpy(h_results.data(), d_results, dict_size * WORD_SIZE * sizeof(char), cudaMemcpyDeviceToHost);
 
         for (int i = 0; i < dict_size; i++) {
-            if (h_results[i * 100] != '\0') {
-				std::string x = &h_results[i * 100];
+            if (h_results[i * WORD_SIZE] != '\0') {
+				std::string x = &h_results[i * WORD_SIZE];
 				x.erase(x.length() - salt.length(), salt.length());
                 outputFile << login << ":" << x << "\n";
                 break;
